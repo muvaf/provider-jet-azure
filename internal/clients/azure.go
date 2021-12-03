@@ -29,7 +29,9 @@ const (
 	keyAzureClientSecret   = "clientSecret"
 	keyAzureTenantID       = "tenantId"
 	// Terraform Provider configuration keys
-	keyTerraformFeatures = "features"
+	keyTerraformFeatures         = "features"
+	keySkipProviderRegistration  = "skip_provider_registration"
+	keyDisableTerraformPartnerId = "disable_terraform_partner_id"
 	// environment variable names for storing credentials
 	envClientID       = "ARM_CLIENT_ID"
 	envClientSecret   = "ARM_CLIENT_SECRET"
@@ -78,8 +80,22 @@ func TerraformSetupBuilder(version, providerSource, providerVersion string) terr
 		}
 
 		ps.Configuration = map[string]interface{}{
-			keyTerraformFeatures:       struct{}{},
-			keyTerraformSubscriptionID: azureCreds[keyAzureSubscriptionID],
+			keyTerraformFeatures: struct{}{},
+			// Terraform AzureRM provider tries to register all resource providers
+			// in Azure just in case if the provider of the resource you're
+			// trying to create is not registered and the returned error is
+			// ambigious. However, this requires service principal to have provider
+			// registration permissions which are irrelevant in most contexts.
+			// We may consider making it configurable in future.
+			// For details, see https://github.com/crossplane-contrib/provider-jet-azure/issues/104
+			keySkipProviderRegistration: true,
+			// Disable sending the Terraform Partner ID if a custom partner_id
+			// isn't specified, which allows Microsoft to better understand the
+			// usage of Terraform. Disabled because it is irrelevant in
+			// Crossplane context. We may consider making it configurable in
+			// future.
+			keyDisableTerraformPartnerId: true,
+			keyTerraformSubscriptionID:   azureCreds[keyAzureSubscriptionID],
 		}
 		// set credentials environment
 		ps.Env = []string{
